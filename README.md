@@ -1,9 +1,12 @@
 # Mandoline: Model Evaluation under Distribution Shift
 
-Mayee Chen*, Karan Goel*, Nimit Sohoni*, Fait Poms, Kayvon Fatahalian, Christopher Re
+Mayee Chen*, Karan Goel*, Nimit Sohoni*, Fait Poms, Kayvon Fatahalian, Christopher Re 
+
+_*equal contribution_
 
 ---
-<embed src="splash.pdf" type="application/pdf" alt="Mandoline splash figure.">
+
+<img src="splash.png" alt="Mandoline splash figure.">
 
 
 ### Abstract
