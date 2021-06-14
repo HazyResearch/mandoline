@@ -24,6 +24,8 @@ We further describe a density ratio estimation framework for the slices and show
 Empirical validation on NLP and vision tasks shows that Mandoline can estimate performance on the target distribution up to 3x more accurately compared to standard baselines.
 
 # About
+For questions, please reach out to `mfchen [at] stanford [dot] edu`. 
+
 If you use Mandoline in your work, please use the following BibTeX entry for citation:
 ```
 @article{chenmandoline2021,
