@@ -26,4 +26,10 @@ Empirical validation on NLP and vision tasks shows that Mandoline can estimate p
 # About
 If you use Mandoline in your work, please use the following BibTeX entry for citation:
 ```
+@article{chenmandoline2021,
+  title={Mandoline: Model Evaluation under Distribution Shift},
+  author={Mayee Chen* and Karan Goel* and Nimit Sohoni* and Fait Poms and Kayvon Fatahalian and Christopher Re},
+  journal={International Conference of Machine Learning (ICML)},
+  year={2021},
+}
 ```
