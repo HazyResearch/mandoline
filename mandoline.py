@@ -1,20 +1,39 @@
 from functools import partial
 from types import SimpleNamespace
+from typing import Optional, List
 
 import numpy as np
-from mosaic.tools.lazy_loader import LazyLoader
 
-scipy_optimize = LazyLoader("scipy.optimize")
-scipy_special = LazyLoader("scipy.special")
-skmetrics = LazyLoader("sklearn.metrics.pairwise")
+import scipy.optimize
+import scipy.special
+import sklearn.metrics.pairwise as skmetrics
 
 
-def Phi(D, edge_list: list = None):
-    """Given an n x d matrix of (example, slices), calculate the potential
+def Phi(
+    D: np.ndarray,
+    edge_list: np.ndarray = None,
+):
+    """
+    Given an n x d matrix of (example, slices), calculate the potential
     matrix.
 
     Includes correlations modeled by the edges in the `edge_list`.
+
+    Args:
+        D (np.ndarray): n x d matrix of (example, slice)
+        edge_list (np.ndarray): k x 2 matrix of edge correlations to be modeled.
+            edge_list[i, :] should be indices for a pair of columns of D.
+
+    Returns:
+        Potential matrix. Equals D when edge_list is None, otherwise adds additional
+        (x_i * x_j) "cross-terms" corresponding to the edges in the `edge_list`.
+
+    Examples:
+        >>> D = np.random.choice([-1, 1], size=(100, 6))
+        >>> edge_list = np.array([(0, 1), (1, 4)])
+        >>> Phi(D, edge_list)
     """
+
     if edge_list is not None:
         pairwise_terms = (
             D[np.arange(len(D)), edge_list[:, 0][:, np.newaxis]].T
@@ -25,19 +44,26 @@ def Phi(D, edge_list: list = None):
         return D
 
 
-def log_partition_ratio(x, Phi_D_src, n_src):
-    """Calculate the log-partition ratio in the KLIEP problem."""
-    return np.log(n_src) - scipy_special.logsumexp(Phi_D_src.dot(x))
+def log_partition_ratio(
+    x: np.ndarray,
+    Phi_D_src: np.ndarray,
+    n_src: int,
+):
+    """
+    Calculate the log-partition ratio in the KLIEP problem.
+    """
+    return np.log(n_src) - scipy.special.logsumexp(Phi_D_src.dot(x))
 
 
 def mandoline(
-    D_src,
-    D_tgt,
-    edge_list,
-    sigma=None,
+    D_src: np.ndarray,
+    D_tgt: np.ndarray,
+    edge_list: np.ndarray,
+    sigma: float=None,
 ):
     """
     Mandoline solver.
+
     Args:
         D_src: (n_src x d) matrix of (example, slices) for the source distribution.
         D_tgt: (n_tgt x d) matrix of (example, slices) for the source distribution.
@@ -71,7 +97,7 @@ def mandoline(
     n_src, n_tgt = Phi_D_src.shape[0], Phi_D_tgt.shape[0]
 
     def f(x):
-        obj = Phi_D_tgt.dot(x).sum() - n_tgt * scipy_special.logsumexp(Phi_D_src.dot(x))
+        obj = Phi_D_tgt.dot(x).sum() - n_tgt * scipy.special.logsumexp(Phi_D_src.dot(x))
         return -obj
 
     # Set the kernel
@@ -80,16 +106,16 @@ def mandoline(
     def llkliep_f(x):
         obj = kernel(
             Phi_D_tgt, x[:, np.newaxis]
-        ).sum() - n_tgt * scipy_special.logsumexp(kernel(Phi_D_src, x[:, np.newaxis]))
+        ).sum() - n_tgt * scipy.special.logsumexp(kernel(Phi_D_src, x[:, np.newaxis]))
         return -obj
 
     # Solve
     if not sigma:
-        opt = scipy_optimize.minimize(
+        opt = scipy.optimize.minimize(
             f, np.random.randn(Phi_D_tgt.shape[1]), method="BFGS"
         )
     else:
-        opt = scipy_optimize.minimize(
+        opt = scipy.optimize.minimize(
             llkliep_f, np.random.randn(Phi_D_tgt.shape[1]), method="BFGS"
         )
 
@@ -104,7 +130,9 @@ def mandoline(
 
 
 def log_density_ratio(D, solved):
-    """Calculate the log density ratio for a solved Mandoline run."""
+    """
+    Calculate the log density ratio for a solved Mandoline run.
+    """
     Phi_D = Phi(D, None)
     return Phi_D.dot(solved.opt.x) + log_partition_ratio(
         solved.opt.x, solved.Phi_D_src, solved.n_src
@@ -112,7 +140,8 @@ def log_density_ratio(D, solved):
 
 
 def get_k_most_unbalanced_gs(D_src, D_tgt, k):
-    """Get the top k slices that shift most between source and target
+    """
+    Get the top k slices that shift most between source and target
     distributions.
 
     Uses difference in marginals between each slice.
@@ -123,24 +152,56 @@ def get_k_most_unbalanced_gs(D_src, D_tgt, k):
     return list(indices), list(differences)
 
 
-def weighted_estimator(weights, empirical_mat):
-    """Calculate a weighted empirical mean over a matrix.
-
-    Calculates an unweighted mean if `weights` is None.
+def weighted_estimator(weights: Optional[np.ndarray], mat: np.ndarray):
     """
+    Calculate a weighted empirical mean over a matrix of samples.
+
+    Args:
+        weights (Optional[np.ndarray]):
+            length n array of weights that sums to 1. Calculates an unweighted
+            mean if `weights` is None.
+        mat (np.ndarray):
+            (n x r) matrix of empirical observations that is being averaged.
+
+    Returns:
+        Length r np.ndarray of weighted means.
+    """
+    assert np.sum(weights) == 1, "`weights` must sum to 1."
     if weights is None:
-        return np.mean(empirical_mat, axis=0)
-    return np.sum(weights[:, np.newaxis] * empirical_mat, axis=0)
+        return np.mean(mat, axis=0)
+    return np.sum(weights[:, np.newaxis] * mat, axis=0)
 
 
 def estimate_performance(
-    D_src,
-    D_tgt,
-    edge_list,
-    empirical_mat_list_src,
+    D_src: np.ndarray,
+    D_tgt: np.ndarray,
+    edge_list: np.ndarray,
+    empirical_mat_list_src: List[np.ndarray],
 ):
-    """Estimate performance on a target distribution using slices from the
-    source and target data."""
+    """
+    Estimate performance on a target distribution using slice information from the
+    source and target data.
+
+    This function runs Mandoline to calculate the importance weights to reweight
+    the source data.
+
+    Args:
+        D_src (np.ndarray): (n_src x d) matrix of (example, slices) for the source
+            distribution.
+        D_tgt (np.ndarray): (n_tgt x d) matrix of (example, slices) for the target
+            distribution.
+        edge_list (np.ndarray):
+        empirical_mat_list_src (List[np.ndarray]):
+
+    Returns:
+        SimpleNamespace with 3 attributes
+        - `all_estimates` is a list of SimpleNamespace objects with
+            2 attributes
+            - `weighted` is the estimate for the target distribution
+            - `source` is the estimate for the source distribution
+        - `solved`: result of scipy.optimize Mandoline solver
+        - `weights`: self-normalized importance weights used to weight the source data
+    """
     # Run the solver
     solved = mandoline(D_src, D_tgt, edge_list)
 
