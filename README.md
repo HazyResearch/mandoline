@@ -3,8 +3,7 @@
 Mayee Chen*, Karan Goel*, Nimit Sohoni*, Fait Poms, Kayvon Fatahalian, Christopher Re
 
 ---
-
-<img src="splash.pdf" alt="Mandoline splash figure.">
+<embed src="splash.pdf" type="application/pdf" alt="Mandoline splash figure.">
 
 
 ### Abstract
