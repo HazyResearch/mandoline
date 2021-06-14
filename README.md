@@ -10,8 +10,7 @@ _*equal contribution_
 
 
 ### Abstract
-```
-Machine learning models are often deployed in different settings than they were trained and validated on, 
+> Machine learning models are often deployed in different settings than they were trained and validated on, 
 posing a challenge to practitioners who wish to predict how well the deployed model will perform on a target distribution. 
 If an unlabeled sample from the target distribution is available, along with a labeled sample from 
 a possibly different source distribution, standard approaches such as importance weighting can be applied to estimate performance on the target. 
@@ -23,7 +22,6 @@ Specifically, users write simple “slicing functions” — noisy, potentially 
 possible axes of distribution shift to compute reweighted performance estimates. 
 We further describe a density ratio estimation framework for the slices and show how its estimation error scales with slice quality and dataset size. 
 Empirical validation on NLP and vision tasks shows that Mandoline can estimate performance on the target distribution up to 3x more accurately compared to standard baselines.
-```
 
 # About
 If you use Mandoline in your work, please use the following BibTeX entry for citation:
